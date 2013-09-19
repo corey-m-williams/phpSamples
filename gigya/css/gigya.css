@@ -1,0 +1,101 @@
+div#gigya-login{
+	/*position: absolute;
+	left: 0px;
+	top: 100px;
+	z-index: 20;*/
+}
+div#gigya-login-box{
+	/*left: 0px;
+	top: 70px;*/
+	/*position: absolute;
+  right: 5px;
+  top: 110px;
+	z-index: 20;*/
+  float: right;
+  display: inline-block;
+}
+div#breadcrumb{
+  background: none !important;
+  border: none !important;
+  display: inline-block !important;
+}
+
+div#gigya-logout{
+	/*top: 110px;
+	right: 500px;*/
+	/*position: absolute;
+  top: 115px;
+  right: 210px;
+	z-index: 20;*/
+  display: inline-block;
+  float: right;
+}
+
+div#block-admin-search{
+  margin-bottom: 0px !important;
+}
+
+div#inside-post-header{
+  width:100%;
+  /*background: url('../img/InsidePostHead.png');
+  background-repeat: no-repeat;
+  */
+  background-position: -276px -618px;
+  height: 30px;
+  width: 298px;
+}
+
+div #inside-post-wrapper{
+  width: 300px;
+}
+
+div#inside-post-wrapper iframe.twitter-follow-button{
+  bottom: 5px;
+  right: 10px;
+  z-index: 10;
+  position: absolute;
+}
+
+div#inside-post-follow-button{
+  position: relative;
+  z-index: 10;
+  top: -25px;
+  right: 5px;
+  overflow: visible !important;
+  height: 0;
+  float: right !important;
+}
+
+div#inside-post-wrapper div#inside-post-twitter div.gig-chat-msg table{
+  background: transparent;
+}
+
+div#inside-post-wrapper div#inside-post-twitter div.gig-chat-msg td{
+  line-height: normal;
+}
+
+div#social-links-container{
+  margin-bottom: 11px;	
+}
+
+div#gigya-comments{
+  margin-left: 10px;
+  padding-right: 119px;
+  padding-bottom: 10px;
+  border-top: 1px solid #ccc;
+}
+
+div#gigya-comments div#gigya-comments-photo{
+  float: left;
+  margin-right: 8px;
+}
+
+div#gigya-comments div#gigya-comments-login{
+  line-height: 2em;
+  padding-top: 5px;
+  font-weight: bold;
+}
+
+div#gigya-comments a.gig-comments-button-disabled{
+  color: #b4b4b4 !important;
+}

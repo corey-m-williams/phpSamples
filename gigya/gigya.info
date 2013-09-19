@@ -1,0 +1,8 @@
+; $Id: gigya.info, v 1 2011/06/28 10:36:00 cwilliams Exp $
+name = "Gigya"
+description = "Provides gigya integration with the site"
+package = "misc"
+dependencies[] = admin
+dependencies[] = theme
+core = 6.x
+version = 6.x-0.1

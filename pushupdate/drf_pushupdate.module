@@ -1,0 +1,19 @@
+<?php
+function pushupdate_nodeapi(&$node, $op, $teaser = NULL, $page = NULL){
+  if($op == 'update' || $op == 'insert'){
+    //regenerate the front page top stories block
+    $view = views_get_view('top_stories');
+    $view->set_display("block_1");
+    $view->execute("block_1");
+    include_once(drupal_get_path('theme', 'drf') . "/theme_funcs.php");
+    $top_stories_block = views_view__top_stories__block_1($view);
+    file_put_contents("sites/default/files/topStories.out", $top_stories_block);
+  }
+}
+
+function pushupdate_preprocess_page(&$vars){
+  if(drupal_is_front_page()){
+    drupal_add_js(drupal_get_path('module', 'pushupdate') . "/js/socket.io/socket.io.min.js");
+    drupal_add_js(drupal_get_path('module', 'pushupdate') . "/js/pushupdate.js");
+  }
+}

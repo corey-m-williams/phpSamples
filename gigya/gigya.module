@@ -1,0 +1,208 @@
+<?php
+
+define('GIGYA_API_KEY', trim(variable_get('gigya_api_key', "fake-key")));
+
+//hook_preprocess_page implementation
+function gigya_preprocess_page(&$vars = array()){
+  $is_admin_page = ((arg(0) == 'admin') ||
+    (arg(0) == 'node' && arg(2) == 'edit') ||
+    (arg(0) == 'node' && arg(1) == 'add'));
+	if($vars == array()){
+		return;
+	}
+	if(isset($vars['node'])){
+    $node = $vars['node'];
+		//nid, type, title
+		$gigya_js_setting = array(
+			'node_type' => $node->type,
+			'node_nid' => $node->nid,
+			'node_title' => $node->title,
+		);
+    //If this is a blog, we need the blog author's name for the comments category
+    if($node->type == 'blog'){
+      $blog_author = admin_get_blog_author_name($node);
+      $gigya_js_setting['blog_author'] = $blog_author;
+    }
+		drupal_add_js(array('gigya' => $gigya_js_setting), 'setting');
+    //Enable comments on articles and blogs
+    if(!$is_admin_page &&
+        ($node->type == 'article' || $node->type == 'blog')){
+      drupal_add_js("Drupal.behaviors.show_comments = function(){gigya_comments_show();}", 'inline');
+    }
+    //Gigya comments SEO
+    if((!$is_admin_page) &&
+      ($node->type == 'article' || $node->type == 'blog')){
+      $category_id = 'Articles';
+      if($node->type == 'blog'){
+        $category_id = rawurlencode(admin_get_blog_author_name($node));
+      }
+      $html_comments_api_url = "http://comments.gigya.com/comments.getComments?";
+      $html_comments_url = $html_comments_api_url . "dataFormat=html&ApiKey=" . GIGYA_API_KEY . "&categoryID=$category_id&streamID=" . $node->nid;
+             //Use curl to get the data from the REST API
+      $ch = curl_init();
+      curl_setopt($ch, CURLOPT_URL, $html_comments_url);
+      curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+      $html_comments_return = curl_exec($ch);
+      curl_close($ch);
+      
+      //Decode and process the response from Gigya
+      $return_data = json_decode($html_comments_return);
+      $html_comments_text = '';
+      if($return_data->statusCode == '200'){
+        $html_comments_text = $return_data->comments;
+      }else{
+        watchdog("gigya", "Unable to get html comments from gigya. HTTP Status Code: " . $return_data->statusCode . " - Error message: " . $return_data->errorMessage);
+      }
+      $html_comments = "<a id='comments'></a><div id='gigya-comments'>" . $html_comments_text . "</div>";
+      
+      if($html_comments){
+        $vars['content'] .= $html_comments;
+      }
+    }
+	}
+}
+
+//hook_init implementation
+function gigya_init(&$vars = array()){
+	$gigya_main_js_file = 'http://cdn.gigya.com/JS/socialize.js';
+	$gigya_main_js_file .= '?apikey=' . GIGYA_API_KEY;
+	//Include the gigya js file (since it's external, we have to use drupal_set_html_head, as drupal_add_js
+	//		would add the current site to the start of the file
+	drupal_set_html_head("<script type='text/javascript' src='$gigya_main_js_file'></script>");
+	//Include our javascript file
+	drupal_add_js(drupal_get_path('module', 'gigya') . '/js/gigya.js');
+	//Add in some settings
+	$gigya_js_settings = array(
+		'basepath' => base_path(),
+		'APIKey' => GIGYA_API_KEY,
+    'siteID' => variable_get('gigya_site_id', 5327151),
+	);
+	drupal_add_js(array('gigya' => $gigya_js_settings), 'setting');
+	//Include our style file for the gigya stuff
+	drupal_add_css(drupal_get_path('module', 'gigya') . '/css/gigya.css');
+}
+
+function gigya_menu(){
+	$items = array();
+	//Game interface link
+	$items['games/social'] = array(
+		'title' => 'Social Games Status',
+		'page callback' => '_gigya_games_display',
+		'type' => MENU_CALLBACK,
+		'access callback' => TRUE,
+	);
+	//Our admin settings
+	$items['admin/gigya'] = array(
+		'title' => 'Gigya Settings',
+		'description' => 'Manage Gigya Settings',
+		'page callback' => 'drupal_get_form',
+		'page arguments' => array('gigya_settings'),
+		'access arguments' => array('administer settings'),
+	);
+	return $items;
+}
+
+function _gigya_games_display(){
+	$output = '';
+	$output .= <<<EOT
+	<div id='gigya-user-status'></div>
+	<div id='gigya-achievements'></div>
+	<div id='gigya-leaderboard'></div>
+	<script language='javascript'>
+		Drupal.behaviors.gigya_game_ui = function(context){
+				gigya.services.gm.showUserStatusUI(gigya.conf, {containerID: 'gigya-user-status'});
+				gigya.services.gm.showAchievementsUI(gigya.conf, {containerID: 'gigya-achievements'});
+				gigya.services.gm.showLeaderboardUI(gigya.conf, {containerID: 'gigya-leaderboard'});
+				//gigya.services.gm.showNotifications(gigya.conf, {debugMode: 'true'});
+				gigya.services.gm.showNotifications(gigya.conf, {});
+		};
+	</script>
+EOT;
+
+	return t($output);
+}
+
+function gigya_settings(){
+	$form = array();
+	$form['gigya_api_key'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Gigya API key'),
+		'#description' => 'Set the API key for the current domain',
+		'#default_value' => variable_get('gigya_api_key', "fake-key"),
+	);
+  $form['gigya_site_id'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Gigya Site ID'),
+    '#description' => 'The current site ID with gigya<br />Prod: 5327151<br />Stage: 5327311',
+    '#default_value' => variable_get('gigya_site_id', 5327151),
+  );
+  $form['gigya_inside_post_feed_category'] = array(
+    '#type' => 'textfield',
+    '#title' => t("Inside Post Feed Category ID"),
+    '#description' => "Inside Post Feed Category ID from Gigya<br />Prod: 36882969<br />Stage: 31255345",
+    '#default_value' => variable_get('gigya_inside_post_feed_category', 36882969),
+  );
+
+	return system_settings_form($form);
+}
+
+function gigya_theme($existing, $type, $theme, $path){
+  return array(
+    'inside_post_twitter' => array(
+    ),
+    'gigya_share_bar' => array(
+      $node = array(),
+    ),
+  );
+}
+
+function theme_gigya_share_bar($node){
+  //Check for field_display_sharebar
+  if(isset($node->field_display_sharebar) &&
+    $node->field_display_sharebar[0]['value'] == 0){
+    return "";
+  }
+  $teaser = admin_get_node_teaser($node);
+  $output = '<div class="social-links-container" id="social-links-container">
+                    <script>
+                      gigya_share_page("' . $teaser . '");
+                    </script>
+                  </div>';
+  return $output;
+}
+
+function theme_inside_post_twitter(){
+  $output = '';
+  $output .= "<div id='inside-post-wrapper'>";
+    $output .= "<div id='inside-post-header' class='sprite sprite-inside_post_twitter'>";
+    $output .= "</div>";
+    $output .= "<div id='inside-post-follow-button'>";
+      $output .= <<<EOF
+        <script language='javascript'>
+          var params = {
+            containerID: 'inside-post-follow-button',
+            iconSize: 22,
+            buttons: [
+              {
+                provider: 'twitter',
+                title: '@InsidePost &#8211; latest headlines and live updates <br /><br />@Derby &#8211; track every step on the Triple Crown trail',
+                followUsers: 'InsidePost, Derby',
+                action: 'dialog'
+              },
+              {
+                provider: 'facebook',
+                actionURL: 'http://www.facebook.com/racingform',
+                action: 'dialog'
+              }
+            ]
+          };
+          gigya.services.socialize.showFollowBarUI(gigya.conf, params);
+        </script>
+EOF;
+    $output .= "</div>";
+    $output .= "<div id='inside-post-twitter' style='width:300px;height:450px;' ></div>";
+    $output .= "<script language='javascript'>gigya_chat_show('', " . variable_get('gigya_inside_post_feed_category', 36882969) . ", 'inside-post-twitter');</script>";
+  $output .= "</div>"; //end of inside-post-wrapper
+  return $output;
+}
+

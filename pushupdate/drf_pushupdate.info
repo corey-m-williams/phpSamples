@@ -1,0 +1,8 @@
+; $Id: pushupdate.info, v 1 2012/07/24 12:30:00 cwilliams Exp $
+name = "Push Updates"
+description = "Uses node.js and Socket.io to implement push notifications on the site"
+package = "misc"
+dependencies[] = 
+dependencies[] = 
+core = 6.x
+version = 6.x-0.1
