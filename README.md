@@ -14,3 +14,5 @@ Module to save a Drupal block (section of a site) to file, with a node.js server
 Upon a change being seen, the server sends out the updated section of the site through socket.io, which then updates the page with the new content.
 
 This was made to have faster updates on a site with a 15 minute static cache
+
+the topStoryPush.js is the node.js server application that pushes out the updates
